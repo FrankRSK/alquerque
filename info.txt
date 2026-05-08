@@ -1,0 +1,35 @@
+Alquerque – Ein strategischer Klassiker neu entdeckt
+
+Willkommen zu Alquerque, einem fesselnden Strategiespiel, dessen Regeln bereits im 13. Jahrhundert im berühmten "Buch der Spiele" von König Alfonso X. von Kastilien beschrieben wurden. Das Ziel ist einfach, aber herausfordernd: Erobere alle Steine deines Gegners oder mache ihn bewegungsunfähig, um die Partie für dich zu entscheiden.
+
+Diese digitale Umsetzung wurde mit viel Liebe zum Detail entwickelt und bietet dir ein rundes Spielerlebnis mit vielen modernen Funktionen:
+
+Besondere Merkmale des Spiels:
+
+- Spiele gegen die KI: Du trittst gegen einen Computergegner an, dessen Spielstärke du selbst bestimmen kannst.
+
+- - Einfach: Perfekt für eine entspannte Runde oder zum Kennenlernen der Spielmechanik.
+
+- - Mittel: Ein fordernder Gegner, der gezielt auf das Schlagen von Steinen aus ist.
+
+- - Schwer: Eine echte Herausforderung, bei der die KI mit einem Minimax-Algorithmus ihre Züge vorausschauend plant.
+
+- Stilvolles Design: Das gesamte Spiel ist in einer antiken Optik gehalten – von der Pergament-Hintergrundfarbe über das hölzerne Spielbrett bis zu den Spielsteinen aus hellem und dunklem Stein. Die Anzeige der verbleibenden Steine in römischen Ziffern verstärkt dieses historische Flair zusätzlich.
+
+- Einstellbare Spielhilfen: Um den Einstieg zu erleichtern, kannst du dir im Spiel helfen lassen:
+
+- - Zug-Hilfe: Zeigt dir alle erlaubten Züge (grün) und Schlagmöglichkeiten (rot) an.
+
+- - Stein-Hilfe: Hebt die Steine hervor, mit denen du laut Regelwerk schlagen musst (Schlagzwang).
+
+- Voll anpassbar: In den Optionen kannst du die Spielhilfen und die Soundeffekte nach deinen Wünschen ein- oder ausschalten.
+
+Die Spielregeln im Überblick:
+
+- Spielaufbau: Das Brett besteht aus 5x5 verbundenen Punkten. Jeder Spieler startet mit 12 Steinen, nur der Punkt in der Mitte bleibt frei.
+
+- Ziehen: Du darfst deine Steine entlang der Linien auf einen freien, benachbarten Punkt bewegen – vorwärts, seitwärts und diagonal-vorwärts. Ein normaler Zug rückwärts ist nicht erlaubt.
+
+- Schlagen: Einen gegnerischen Stein schlägst du, indem du ihn überspringst. Beim Schlagen darfst du auch rückwärts ziehen. Mehrfachschläge in einem Zug sind möglich und oft der Schlüssel zum Sieg.
+
+- Schlagzwang: Wenn du einen Stein schlagen kannst, musst du diesen Zug ausführen. Dies ist ein zentrales strategisches Element des Spiels.
