@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Alquerque - Mobile Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --board-color: #A0522D;
+            --border-color: #5D4037;
+            --highlight-color: #D4AC6E;
+            --bg-color: #F1E9D2;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Cinzel', serif;
+            background: var(--bg-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #4B3F3A;
+            overflow-x: hidden;
+            touch-action: manipulation; /* Verhindert Zoom-Verzögerung auf Handys */
+        }
+
+        /* Hauptcontainer */
+        .game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 10px;
+            flex: 1;
+        }
+
+        /* Header Bereich */
+        header {
+            text-align: center;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: var(--border-color);
+            margin-bottom: 5px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* Status Leiste */
+        .status-bar {
+            background: rgba(255, 255, 255, 0.5);
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 1px solid rgba(93, 64, 55, 0.3);
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            text-align: center;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            width: 100%;
+        }
+
+        .status-error { color: #d32f2f; background: #ffebee; border-color: #ef9a9a; }
+        .status-success { color: #2e7d32; background: #e8f5e9; border-color: #a5d6a7; }
+        .status-info { color: #1565c0; background: #e3f2fd; border-color: #90caf9; }
+
+        /* Spielbrett Container - Der Schlüssel zur Responsivität */
+        .board-area {
+            position: relative;
+            width: 100%;
+            max-width: 450px; /* Maximale Größe auf Desktop */
+            aspect-ratio: 1 / 1; /* Hält das Brett immer quadratisch */
+            margin: 0 auto 20px auto;
+        }
+
+        .board {
+            width: 100%;
+            height: 100%;
+            background: var(--board-color);
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4), inset 0 0 30px rgba(0,0,0,0.3);
+            border: 4px solid #654321;
+            position: relative;
+        }
+
+        .board-svg {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none; /* Klicks gehen durch das SVG durch */
+        }
+
+        .board-line {
+            stroke: #3e2723;
+            stroke-width: 3;
+            stroke-linecap: round;
+        }
+
+        /* Positionen und Steine */
+        .position {
+            position: absolute;
+            width: 18%; /* Prozentual zur Brettgröße */
+            height: 18%;
+            transform: translate(-50%, -50%); /* Zentriert den Punkt auf der Koordinate */
+            border-radius: 50%;
+            z-index: 10;
+            cursor: pointer;
+            /* Debug: background: rgba(255,0,0,0.2); */
+        }
+
+        /* Visuelles Feedback für Züge */
+        .position.valid-move::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40%; height: 40%;
+            background: rgba(85, 139, 47, 0.6);
+            border-radius: 50%;
+            box-shadow: 0 0 10px #558B2F;
+        }
+
+        .position.valid-capture::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40%; height: 40%;
+            background: rgba(198, 40, 40, 0.6);
+            border-radius: 50%;
+            box-shadow: 0 0 10px #C62828;
+            animation: pulse-red 1s infinite;
+        }
+
+        .piece {
+            width: 75%; /* Stein ist etwas kleiner als das Touch-Feld */
+            height: 75%;
+            border-radius: 50%;
+            position: absolute;
+            top: 12.5%; left: 12.5%;
+            box-shadow: 2px 4px 6px rgba(0,0,0,0.5), inset 2px 2px 5px rgba(255,255,255,0.3);
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(0,0,0,0.5);
+        }
+
+        .piece.white { background: radial-gradient(circle at 30% 30%, #fff8e1, #d7ccc8); }
+        .piece.black { background: radial-gradient(circle at 30% 30%, #5d4037, #3e2723); }
+
+        .piece.selected {
+            transform: scale(1.15);
+            box-shadow: 0 0 15px var(--highlight-color);
+            border: 2px solid var(--highlight-color);
+            z-index: 20;
+        }
+
+        /* Animationen */
+        @keyframes pulse-red {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+            50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+        }
+
+        /* Spieler Info Leiste (Unten) */
+        .player-hud {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 450px;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+
+        .player-card {
+            flex: 1;
+            background: rgba(255,255,255,0.3);
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85rem;
+        }
+
+        .player-card.active {
+            background: rgba(255,255,255,0.8);
+            border-color: var(--border-color);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .p-icon { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #333; }
+        .p-icon.white { background: #fff8e1; }
+        .p-icon.black { background: #3e2723; }
+
+        /* Controls (Menu) */
+        .controls-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .btn {
+            background: #C8AD7F;
+            border: 2px solid #5D4037;
+            color: #3e2723;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            touch-action: manipulation;
+        }
+
+        .btn:active { background: #a1887f; transform: translateY(1px); }
+
+        /* Modals */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal-content {
+            background: var(--bg-color);
+            padding: 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 85vh;
+            overflow-y: auto;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 10px; }
+        .close-btn { font-size: 24px; cursor: pointer; padding: 5px; }
+        
+        .setting-row { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; padding: 10px; background: rgba(0,0,0,0.05); border-radius: 8px; }
+        select { padding: 5px; border-radius: 4px; border: 1px solid #5D4037; background: #fff; font-family: inherit; }
+
+        /* Checkbox Switch */
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #8D6E63; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: #F1E9D2; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #2e7d32; }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        /* Media Queries für kleine Handys */
+        @media (max-height: 600px) {
+            h1 { font-size: 1.5rem; margin: 5px; }
+            .board-area { max-width: 300px; }
+            .status-bar { padding: 4px; font-size: 0.8rem; margin-bottom: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-wrapper">
+    <header>
+        <h1>Alquerque</h1>
+        <div id="status" class="status-bar status-info">Spiel wird geladen...</div>
+    </header>
+
+    <div class="board-area">
+        <div class="board" id="board">
+            <svg class="board-svg" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
+                <rect x="50" y="50" width="300" height="300" fill="none" stroke="#3e2723" stroke-width="3"/>
+                <line x1="50" y1="125" x2="350" y2="125" class="board-line"/>
+                <line x1="50" y1="200" x2="350" y2="200" class="board-line"/>
+                <line x1="50" y1="275" x2="350" y2="275" class="board-line"/>
+                <line x1="125" y1="50" x2="125" y2="350" class="board-line"/>
+                <line x1="200" y1="50" x2="200" y2="350" class="board-line"/>
+                <line x1="275" y1="50" x2="275" y2="350" class="board-line"/>
+                <line x1="50" y1="50" x2="350" y2="350" class="board-line"/>
+                <line x1="350" y1="50" x2="50" y2="350" class="board-line"/>
+                <line x1="50" y1="200" x2="200" y2="50" class="board-line"/>
+                <line x1="200" y1="50" x2="350" y2="200" class="board-line"/>
+                <line x1="350" y1="200" x2="200" y2="350" class="board-line"/>
+                <line x1="200" y1="350" x2="50" y2="200" class="board-line"/>
+            </svg>
+            </div>
+    </div>
+
+    <div class="player-hud">
+        <div class="player-card" id="card-white">
+            <div style="display:flex; gap:8px; align-items:center;">
+                <div class="p-icon white"></div>
+                <span id="name-white">Du</span>
+            </div>
+            <span id="score-white" style="font-weight:bold;">12</span>
+        </div>
+        <div class="player-card" id="card-black">
+            <span id="score-black" style="font-weight:bold;">12</span>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <span id="name-black">KI</span>
+                <div class="p-icon black"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls-bar">
+        <button class="btn" onclick="game.newGame()">Neues Spiel</button>
+        <button class="btn" onclick="openModal('settingsModal')">Optionen</button>
+        <button class="btn" onclick="openModal('rulesModal')">Regeln</button>
+        <div class="btn" style="background:transparent; border:none; text-align:center; font-size:0.7em; cursor:default;">
+            Schwierigkeit:<br><strong id="diff-display">Mittel</strong>
+        </div>
+    </div>
+</div>
+
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Einstellungen</h2>
+            <span class="close-btn" onclick="closeModal('settingsModal')">&times;</span>
+        </div>
+        <div class="setting-row">
+            <label>Schwierigkeitsgrad</label>
+            <select id="difficultySelect" onchange="game.setDifficulty(this.value)">
+                <option value="easy">Einfach</option>
+                <option value="medium" selected>Mittel</option>
+                <option value="hard">Schwer</option>
+            </select>
+        </div>
+        <div class="setting-row">
+            <label>Sound Effekte</label>
+            <label class="switch">
+                <input type="checkbox" id="soundCheck" checked onchange="game.toggleSound(this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="setting-row">
+            <label>Zug-Hilfen anzeigen</label>
+            <label class="switch">
+                <input type="checkbox" id="helpCheck" checked onchange="game.toggleHelp(this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+</div>
+
+<div id="rulesModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Regeln</h2>
+            <span class="close-btn" onclick="closeModal('rulesModal')">&times;</span>
+        </div>
+        <div style="line-height: 1.5; font-size: 0.9rem;">
+            <p><strong>Ziel:</strong> Schlage alle gegnerischen Steine oder blockiere sie.</p><br>
+            <p><strong>Bewegung:</strong> Ziehe entlang der Linien auf einen freien Nachbarpunkt. Rückwärts ziehen ist nur beim Schlagen erlaubt.</p><br>
+            <p><strong>Schlagen:</strong> Überspringe einen gegnerischen Stein. Mehrfachschläge sind möglich.</p><br>
+            <p style="color:#d32f2f;"><strong>Achtung:</strong> Es herrscht Schlagzwang! Wenn du schlagen kannst, musst du es tun.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* Hilfsfunktionen */
+    const $ = (id) => document.getElementById(id);
+
+    class AlquerqueGame {
+        constructor() {
+            this.board = new Array(25).fill(null);
+            this.turn = 'white'; // white = Mensch, black = KI
+            this.selected = null;
+            this.gameState = 'init'; 
+            this.difficulty = 'medium';
+            this.settings = { sound: true, help: true };
+            this.connections = this.buildConnections();
+            
+            this.initAudio();
+            this.renderBoardGrid();
+            this.newGame();
+        }
+
+        initAudio() {
+            try { this.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } 
+            catch (e) { console.log('Audio disabled'); }
+        }
+
+        playTone(type) {
+            if (!this.settings.sound || !this.audioCtx) return;
+            if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+            
+            const osc = this.audioCtx.createOscillator();
+            const gain = this.audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(this.audioCtx.destination);
+            
+            const now = this.audioCtx.currentTime;
+            if (type === 'move') {
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+            } else if (type === 'capture') {
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+            } else if (type === 'win') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.linearRampToValueAtTime(800, now + 0.2);
+            } else if (type === 'error') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(100, now + 0.2);
+            }
+            
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            
+            osc.start(now);
+            osc.stop(now + 0.3);
+        }
+
+        buildConnections() {
+            // Logik für gültige Nachbarn basierend auf 5x5 Grid
+            const conns = {};
+            for(let i=0; i<25; i++) {
+                conns[i] = [];
+                const x = i % 5;
+                const y = Math.floor(i / 5);
+                
+                // Alle Richtungen
+                const dirs = [[1,0], [-1,0], [0,1], [0,-1]];
+                
+                // Diagonalen prüfen (Alquerque Board Specific)
+                // Die SVG Logik zeigt: Das große Kreuz (0,0 bis 4,4 und 4,0 bis 0,4)
+                // Plus die innere Raute (2,0 -> 0,2 -> 2,4 -> 4,2 -> 2,0)
+                // Einfacher Standard-Check für Alquerque:
+                // Gerade Koordinaten (Summe x+y ist gerade) haben Diagonalen.
+                // Ungerade Koordinaten (Summe x+y ungerade) haben KEINE Diagonalen.
+                if ((x+y) % 2 === 0) {
+                    dirs.push([1,1], [1,-1], [-1,1], [-1,-1]);
+                }
+
+                dirs.forEach(([dx, dy]) => {
+                    const nx = x + dx, ny = y + dy;
+                    if (nx >= 0 && nx < 5 && ny >= 0 && ny < 5) {
+                        conns[i].push(ny * 5 + nx);
+                    }
+                });
+            }
+            return conns;
+        }
+
+        renderBoardGrid() {
+            const container = $('board');
+            // Lösche alte Positionen (aber behalte SVG)
+            const oldPos = container.querySelectorAll('.position');
+            oldPos.forEach(el => el.remove());
+
+            // 5x5 Grid: SVG geht von 50 bis 350. Gesamtbreite 400.
+            // 50 / 400 = 12.5%
+            // Abstand 75 / 400 = 18.75%
+            for (let i = 0; i < 25; i++) {
+                const x = i % 5;
+                const y = Math.floor(i / 5);
+                
+                const posDiv = document.createElement('div');
+                posDiv.className = 'position';
+                posDiv.dataset.idx = i;
+                
+                // Prozentuale Positionierung
+                const left = 12.5 + (x * 18.75);
+                const top = 12.5 + (y * 18.75);
+                
+                posDiv.style.left = `${left}%`;
+                posDiv.style.top = `${top}%`;
+                
+                posDiv.onclick = () => this.handleInput(i);
+                
+                container.appendChild(posDiv);
+            }
+        }
+
+        renderPieces() {
+            // Zuerst "Status" Klassen entfernen
+            document.querySelectorAll('.position').forEach(el => {
+                el.innerHTML = ''; // Stein entfernen
+                el.className = 'position'; // Klassen resetten
+            });
+
+            let w = 0, b = 0;
+            this.board.forEach((piece, idx) => {
+                if (!piece) return;
+                if (piece === 'white') w++; else b++;
+                
+                const posEl = document.querySelector(`.position[data-idx="${idx}"]`);
+                const pEl = document.createElement('div');
+                pEl.className = `piece ${piece}`;
+                if (this.selected === idx) pEl.classList.add('selected');
+                posEl.appendChild(pEl);
+            });
+
+            $('score-white').innerText = w;
+            $('score-black').innerText = b;
+
+            // Highlight möglicher Züge wenn Hilfe an
+            if (this.settings.help && this.turn === 'white' && this.gameState === 'playing') {
+                this.highlightMoves();
+            }
+        }
+
+        newGame() {
+            this.board.fill(null);
+            // Setup Alquerque:
+            // 0-11: Schwarz (oben), 13-24: Weiß (unten), 12 (Mitte): Leer
+            // Achtung: Klassisch ist "Weiß beginnt", also sollte Weiß unten sein.
+            for(let i=0; i<12; i++) this.board[i] = 'black'; // Gegner
+            for(let i=13; i<25; i++) this.board[i] = 'white'; // Spieler
+
+            this.turn = 'white';
+            this.gameState = 'playing';
+            this.selected = null;
+            this.mustCaptureFrom = null; // Für Kettenschläge
+            
+            this.updateStatus('Du bist am Zug (Weiß)', 'info');
+            this.renderPieces();
+            this.updateHud();
+        }
+
+        updateStatus(msg, type) {
+            const el = $('status');
+            el.textContent = msg;
+            el.className = `status-bar status-${type}`;
+        }
+        
+        updateHud() {
+            $('card-white').classList.toggle('active', this.turn === 'white');
+            $('card-black').classList.toggle('active', this.turn === 'black');
+        }
+
+        // --- Core Logic ---
+
+        handleInput(idx) {
+            if (this.gameState !== 'playing' || this.turn !== 'white') return;
+
+            // Kettenschlag-Zwang
+            if (this.mustCaptureFrom !== null) {
+                if (idx === this.mustCaptureFrom) {
+                    this.selected = idx;
+                    this.renderPieces();
+                    return;
+                }
+                // Prüfen ob Zug ein valider Schlag vom Zwang-Stein ist
+                if (this.isValidMove(this.mustCaptureFrom, idx).isCapture) {
+                    this.executeMove(this.mustCaptureFrom, idx);
+                    return;
+                }
+                this.updateStatus('Du musst weiterschlagen!', 'error');
+                this.playTone('error');
+                return;
+            }
+
+            const piece = this.board[idx];
+            
+            // Auswählen
+            if (piece === 'white') {
+                // Check Schlagzwang global
+                const captures = this.getAllCaptures('white');
+                if (captures.length > 0) {
+                    const isCapturingPiece = captures.some(c => c.from === idx);
+                    if (!isCapturingPiece) {
+                        this.updateStatus('Schlagzwang! Wähle einen Stein, der schlagen kann.', 'error');
+                        return;
+                    }
+                }
+                this.selected = idx;
+                this.renderPieces();
+                return;
+            }
+
+            // Bewegen
+            if (this.selected !== null && piece === null) {
+                const move = this.isValidMove(this.selected, idx);
+                if (move.valid) {
+                    // Check ob man hätte schlagen müssen, es aber nicht tat
+                    const captures = this.getAllCaptures('white');
+                    if (captures.length > 0 && !move.isCapture) {
+                         this.updateStatus('Schlagzwang! Du musst schlagen.', 'error');
+                         this.playTone('error');
+                         return;
+                    }
+                    this.executeMove(this.selected, idx);
+                } else {
+                    this.selected = null;
+                    this.renderPieces();
+                }
+            }
+        }
+
+        isValidMove(from, to) {
+            if (this.board[to] !== null) return { valid: false };
+
+            const fromX = from % 5, fromY = Math.floor(from / 5);
+            const toX = to % 5, toY = Math.floor(to / 5);
+            const dx = toX - fromX;
+            const dy = toY - fromY;
+            const dist = Math.max(Math.abs(dx), Math.abs(dy));
+
+            // Normaler Zug (Distanz 1)
+            if (dist === 1) {
+                // Diagonal check
+                if (Math.abs(dx) === 1 && Math.abs(dy) === 1) {
+                     // Check ob Diagonale auf diesem Feld erlaubt ist
+                     if (!this.connections[from].includes(to)) return { valid: false };
+                }
+                
+                // Rückwärts ziehen verboten (Weiß darf nicht nach oben y--, Schwarz nicht nach unten y++)
+                // Wait: Weiß startet unten (y=3,4). Zieht nach oben (y--). Rückwärts wäre y++.
+                // Schwarz startet oben. Zieht nach unten (y++). Rückwärts wäre y--.
+                const isBackwards = (this.board[from] === 'white' && dy > 0) || (this.board[from] === 'black' && dy < 0);
+                
+                // Ausnahme: Wenn Stein in der letzten Reihe des Gegners ist, kann er nicht mehr vorwärts.
+                // Alquerque Regeln sind hier tricky. Wir bleiben bei: Rückwärts verboten, außer Schlagen.
+                
+                if (isBackwards) return { valid: false };
+                
+                // Muss verbunden sein
+                if (!this.connections[from].includes(to)) return { valid: false };
+
+                return { valid: true, isCapture: false };
+            }
+
+            // Schlagzug (Distanz 2)
+            if (dist === 2) {
+                const midX = fromX + (dx/2);
+                const midY = fromY + (dy/2);
+                const midIdx = midY * 5 + midX;
+                
+                // Diagonal Check für den Sprung
+                // Wenn dx=2 und dy=2, muss der Mittelpunkt auch Diagonalen erlauben
+                if (Math.abs(dx) === 2 && Math.abs(dy) === 2) {
+                     // Check Verbindung from -> mid -> to
+                     if (!this.connections[from].includes(midIdx) || !this.connections[midIdx].includes(to)) return { valid: false };
+                }
+
+                // Prüfen ob dazwischen ein Gegner ist
+                const midPiece = this.board[midIdx];
+                const myPiece = this.board[from];
+                
+                if (midPiece !== null && midPiece !== myPiece) {
+                    return { valid: true, isCapture: true, capturedIdx: midIdx };
+                }
+            }
+
+            return { valid: false };
+        }
+
+        executeMove(from, to) {
+            const move = this.isValidMove(from, to);
+            if (!move.valid) return;
+
+            // Move
+            this.board[to] = this.board[from];
+            this.board[from] = null;
+            this.selected = null;
+
+            if (move.isCapture) {
+                this.board[move.capturedIdx] = null;
+                this.playTone('capture');
+                
+                // Kettenzüge prüfen
+                if (this.canCaptureFrom(to)) {
+                    this.mustCaptureFrom = to;
+                    this.selected = to;
+                    this.renderPieces();
+                    this.updateStatus('Du kannst nochmal schlagen!', 'info');
+                    
+                    // Bei KI sofort weitermachen
+                    if (this.turn === 'black') {
+                        setTimeout(() => this.aiMove(), 500);
+                    }
+                    return;
+                }
+            } else {
+                this.playTone('move');
+            }
+
+            // Zug beenden
+            this.mustCaptureFrom = null;
+            this.checkWin();
+            
+            if (this.gameState === 'playing') {
+                this.turn = this.turn === 'white' ? 'black' : 'white';
+                this.updateHud();
+                this.renderPieces();
+
+                if (this.turn === 'black') {
+                    this.updateStatus('KI überlegt...', 'info');
+                    setTimeout(() => this.aiMove(), 600);
+                } else {
+                    this.updateStatus('Dein Zug', 'info');
+                }
+            }
+        }
+
+        // --- Helper ---
+        getAllCaptures(player) {
+            const captures = [];
+            this.board.forEach((p, idx) => {
+                if (p === player) {
+                    // Prüfe alle Ziele im Radius 2
+                    // Optimierung: Einfach alle Felder im Grid prüfen
+                    // Besser: Hardcoded offsets
+                    const offsets = [[-2,0],[2,0],[0,-2],[0,2],[-2,-2],[2,2],[-2,2],[2,-2]];
+                    const x = idx % 5, y = Math.floor(idx / 5);
+                    
+                    offsets.forEach(([dx, dy]) => {
+                        const nx = x + dx, ny = y + dy;
+                        if(nx >=0 && nx<5 && ny>=0 && ny<5) {
+                            const target = ny * 5 + nx;
+                            const res = this.isValidMove(idx, target);
+                            if (res.valid && res.isCapture) {
+                                captures.push({from: idx, to: target});
+                            }
+                        }
+                    });
+                }
+            });
+            return captures;
+        }
+
+        canCaptureFrom(idx) {
+            // Hilfsfunktion für Kettenschläge
+            const offsets = [[-2,0],[2,0],[0,-2],[0,2],[-2,-2],[2,2],[-2,2],[2,-2]];
+            const x = idx % 5, y = Math.floor(idx / 5);
+            
+            for(let [dx, dy] of offsets) {
+                const nx = x + dx, ny = y + dy;
+                if(nx >=0 && nx<5 && ny>=0 && ny<5) {
+                    const target = ny * 5 + nx;
+                    if (this.isValidMove(idx, target).isCapture) return true;
+                }
+            }
+            return false;
+        }
+
+        highlightMoves() {
+            // Nur wenn Spieler dran
+            const captures = this.getAllCaptures('white');
+            
+            // 1. Zwangszüge (Captures) hervorheben
+            if (this.mustCaptureFrom !== null) {
+                document.querySelector(`.position[data-idx="${this.mustCaptureFrom}"]`).classList.add('valid-capture');
+                return;
+            }
+
+            if (captures.length > 0) {
+                captures.forEach(c => {
+                    // Highlight Startpunkt (Schlagzwang)
+                    const el = document.querySelector(`.position[data-idx="${c.from}"]`);
+                    // Wenn wir schon selektiert haben, zeige Ziel
+                    if (this.selected === c.from) {
+                        const target = document.querySelector(`.position[data-idx="${c.to}"]`);
+                        target.classList.add('valid-capture');
+                    } else {
+                         // Nur markieren, dass dieser Stein genutzt werden MUSS
+                         if(el) el.querySelector('.piece').style.borderColor = '#d32f2f';
+                    }
+                });
+                return;
+            }
+
+            // 2. Normale Züge
+            if (this.selected !== null) {
+                const x = this.selected % 5, y = Math.floor(this.selected / 5);
+                // Umkreis 1
+                for(let dy=-1; dy<=1; dy++) {
+                    for(let dx=-1; dx<=1; dx++) {
+                        if(dx===0 && dy===0) continue;
+                        const nx = x+dx, ny = y+dy;
+                        if(nx>=0 && nx<5 && ny>=0 && ny<5) {
+                            const to = ny*5+nx;
+                            if(this.isValidMove(this.selected, to).valid) {
+                                document.querySelector(`.position[data-idx="${to}"]`).classList.add('valid-move');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        checkWin() {
+            const w = this.board.filter(p => p === 'white').length;
+            const b = this.board.filter(p => p === 'black').length;
+
+            if (w === 0) { this.endGame('black'); return; }
+            if (b === 0) { this.endGame('white'); return; }
+
+            // Patt prüfen (keine Züge möglich)
+            // Einfache Version: Wenn ein Spieler keine Steine mehr hat, ist es klar.
+            // Richtige Patt-Prüfung ist teuer, wir lassen es hier simpel.
+        }
+
+        endGame(winner) {
+            this.gameState = 'ended';
+            const msg = winner === 'white' ? 'Gewonnen!' : 'Verloren!';
+            const color = winner === 'white' ? 'success' : 'error';
+            this.updateStatus(msg, color);
+            this.playTone(winner === 'white' ? 'win' : 'error');
+        }
+
+        // --- AI (Vereinfacht für Stabilität) ---
+        aiMove() {
+            if (this.gameState !== 'playing') return;
+
+            // 1. Kettenschlag Logik
+            if (this.mustCaptureFrom !== null) {
+                // Suche validen Schlag
+                const offsets = [[-2,0],[2,0],[0,-2],[0,2],[-2,-2],[2,2],[-2,2],[2,-2]];
+                const x = this.mustCaptureFrom % 5, y = Math.floor(this.mustCaptureFrom / 5);
+                let moveFound = null;
+
+                for(let [dx, dy] of offsets) {
+                     const nx = x+dx, ny=y+dy;
+                     if(nx>=0 && nx<5 && ny>=0 && ny<5) {
+                         const to = ny*5+nx;
+                         if (this.isValidMove(this.mustCaptureFrom, to).isCapture) {
+                             moveFound = to; break;
+                         }
+                     }
+                }
+                if(moveFound !== null) this.executeMove(this.mustCaptureFrom, moveFound);
+                return;
+            }
+
+            // 2. Normaler Zug
+            // Sammle alle Züge
+            let allMoves = [];
+            let allCaptures = [];
+
+            this.board.forEach((p, idx) => {
+                if (p === 'black') {
+                    // Check Captures (Radius 2)
+                    [[-2,0],[2,0],[0,-2],[0,2],[-2,-2],[2,2],[-2,2],[2,-2]].forEach(([dx,dy]) => {
+                         const nx = idx%5+dx, ny=Math.floor(idx/5)+dy;
+                         if(nx>=0 && nx<5 && ny>=0 && ny<5) {
+                             const to = ny*5+nx;
+                             if(this.isValidMove(idx, to).isCapture) allCaptures.push({from: idx, to: to});
+                         }
+                    });
+                    
+                    if (allCaptures.length === 0) {
+                        // Check Moves (Radius 1)
+                        [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,1],[-1,1],[1,-1]].forEach(([dx,dy]) => {
+                             const nx = idx%5+dx, ny=Math.floor(idx/5)+dy;
+                             if(nx>=0 && nx<5 && ny>=0 && ny<5) {
+                                 const to = ny*5+nx;
+                                 if(this.isValidMove(idx, to).valid) allMoves.push({from: idx, to: to});
+                             }
+                        });
+                    }
+                }
+            });
+
+            // Schlagzwang KI
+            if (allCaptures.length > 0) {
+                const move = allCaptures[Math.floor(Math.random() * allCaptures.length)];
+                this.executeMove(move.from, move.to);
+            } else if (allMoves.length > 0) {
+                // Bei "Schwer" versuchen wir, nicht dumm zu ziehen (sehr rudimentär)
+                if (this.difficulty === 'hard') {
+                    // Sortiere Züge nach "Gehe ich in Gefahr?" (Simpel)
+                    // Wir nehmen einfach einen zufälligen sicheren Zug wenn möglich
+                     const move = allMoves[Math.floor(Math.random() * allMoves.length)];
+                     this.executeMove(move.from, move.to);
+                } else {
+                    const move = allMoves[Math.floor(Math.random() * allMoves.length)];
+                    this.executeMove(move.from, move.to);
+                }
+            } else {
+                // Keine Züge? Verloren.
+                this.endGame('white'); 
+            }
+        }
+        
+        // Settings Interface
+        toggleSound(val) { this.settings.sound = val; }
+        toggleHelp(val) { this.settings.help = val; this.renderPieces(); }
+        setDifficulty(val) { 
+            this.difficulty = val; 
+            $('diff-display').innerText = val === 'easy' ? 'Einfach' : (val === 'medium' ? 'Mittel' : 'Schwer');
+        }
+    }
+
+    // Modal Handling
+    window.openModal = (id) => $(id).style.display = 'flex';
+    window.closeModal = (id) => $(id).style.display = 'none';
+    window.onclick = (e) => { if(e.target.className === 'modal') e.target.style.display = 'none'; };
+
+    // Init
+    let game;
+    window.onload = () => {
+        game = new AlquerqueGame();
+    };
+
+</script>
+</body>
+</html>
